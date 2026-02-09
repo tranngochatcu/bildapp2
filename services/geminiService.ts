@@ -20,8 +20,8 @@ export class GeminiService {
           temperature: 0.2, // Low temperature for academic precision
         },
         history: history.map(h => ({
-            role: h.role,
-            parts: h.parts
+          role: h.role,
+          parts: h.parts
         }))
       });
 
@@ -31,18 +31,23 @@ export class GeminiService {
 
       return response.text || "Xin lỗi, tôi không thể tạo phản hồi lúc này.";
     } catch (error: any) {
-      console.error("Gemini API Error:", error);
-      if (error.message?.includes("API key")) {
-        throw new Error("API Key không hợp lệ hoặc đã hết hạn.");
+      console.error("Gemini API Error Details:", JSON.stringify(error, null, 2));
+      console.error("Gemini API Error Message:", error.message);
+
+      if (error.message?.includes("API key") || error.toString().includes("403")) {
+        throw new Error("API Key không hợp lệ hoặc chưa được kích hoạt Google AI Studio.");
       }
-      throw new Error("Đã xảy ra lỗi khi kết nối với AI. Vui lòng thử lại.");
+      if (error.toString().includes("429")) {
+        throw new Error("Đã vượt quá giới hạn request (Quota Exceeded).");
+      }
+      throw new Error(`Lỗi kết nối AI: ${error.message || "Không xác định"}`);
     }
   }
 
   async generateLessonPlan(
-    topic: string, 
-    duration: string, 
-    level: string, 
+    topic: string,
+    duration: string,
+    level: string,
     templateStructure?: string,
     clos?: string,
     type: 'outline' | 'full' = 'outline'
@@ -70,14 +75,14 @@ export class GeminiService {
     }
 
     if (type === 'outline') {
-        prompt += `
+      prompt += `
         \nYÊU CẦU CHẾ ĐỘ: ĐỀ CƯƠNG TÓM TẮT (OUTLINE)
         - Tập trung vào phân bổ thời gian, cấu trúc các mục, hoạt động dạy học.
         - Không cần viết quá chi tiết nội dung kiến thức, chỉ gạch đầu dòng ý chính.
         - Tạo bảng phân bổ thời gian chi tiết.
         `;
     } else {
-        prompt += `
+      prompt += `
         \nYÊU CẦU CHẾ ĐỘ: NỘI DUNG HOÀN THIỆN CHI TIẾT (FULL CONTENT)
         - Viết đầy đủ nội dung kiến thức như một giáo trình hoặc kịch bản giảng dạy chi tiết.
         - Giải thích sâu các khái niệm kỹ thuật (Definitions, Concepts).
@@ -113,8 +118,8 @@ export class GeminiService {
         model: GEMINI_MODEL_TEXT,
         contents: prompt,
         config: {
-            systemInstruction: SYSTEM_INSTRUCTION,
-            temperature: type === 'full' ? 0.4 : 0.3 // Higher temp for full content creativity
+          systemInstruction: SYSTEM_INSTRUCTION,
+          temperature: type === 'full' ? 0.4 : 0.3 // Higher temp for full content creativity
         }
       });
       return response.text || "Không có dữ liệu trả về.";
@@ -178,8 +183,8 @@ export class GeminiService {
         model: GEMINI_MODEL_TEXT,
         contents: prompt,
         config: {
-            systemInstruction: SYSTEM_INSTRUCTION,
-            temperature: 0.3
+          systemInstruction: SYSTEM_INSTRUCTION,
+          temperature: 0.3
         }
       });
       return response.text || "Không thể tạo hướng dẫn Lab.";
@@ -210,8 +215,8 @@ export class GeminiService {
         model: GEMINI_MODEL_TEXT,
         contents: prompt,
         config: {
-            systemInstruction: SYSTEM_INSTRUCTION,
-            temperature: 0.3
+          systemInstruction: SYSTEM_INSTRUCTION,
+          temperature: 0.3
         }
       });
       return response.text || "Không thể tạo nội dung bài giảng.";
