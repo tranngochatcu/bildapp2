@@ -1,11 +1,16 @@
-import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
+import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
 import { SYSTEM_INSTRUCTION, GEMINI_MODEL_TEXT } from "../constants";
 
 export class GeminiService {
-  private ai: GoogleGenAI;
+  private genAI: GoogleGenerativeAI;
+  private model: GenerativeModel;
 
   constructor(apiKey: string) {
-    this.ai = new GoogleGenAI({ apiKey });
+    this.genAI = new GoogleGenerativeAI(apiKey);
+    this.model = this.genAI.getGenerativeModel({
+      model: GEMINI_MODEL_TEXT,
+      systemInstruction: SYSTEM_INSTRUCTION
+    });
   }
 
   async sendChatMessage(
@@ -13,23 +18,19 @@ export class GeminiService {
     newMessage: string
   ): Promise<string> {
     try {
-      const chat = this.ai.chats.create({
-        model: GEMINI_MODEL_TEXT,
-        config: {
-          systemInstruction: SYSTEM_INSTRUCTION,
-          temperature: 0.2, // Low temperature for academic precision
-        },
+      const chat = this.model.startChat({
         history: history.map(h => ({
           role: h.role,
           parts: h.parts
-        }))
+        })),
+        generationConfig: {
+          temperature: 0.2, // Low temperature for academic precision
+        }
       });
 
-      const response: GenerateContentResponse = await chat.sendMessage({
-        message: newMessage
-      });
-
-      return response.text || "Xin lỗi, tôi không thể tạo phản hồi lúc này.";
+      const result = await chat.sendMessage(newMessage);
+      const response = await result.response;
+      return response.text();
     } catch (error: any) {
       console.error("Gemini API Error Details:", JSON.stringify(error, null, 2));
       console.error("Gemini API Error Message:", error.message);
@@ -114,15 +115,20 @@ export class GeminiService {
     prompt += `\nLưu ý: Nội dung phải chuyên sâu, sử dụng thuật ngữ kỹ thuật chính xác, văn phong sư phạm trang trọng.`;
 
     try {
-      const response = await this.ai.models.generateContent({
+      // Create a new model instance for specific generation config if needed, 
+      // or use the base one but we want distinct config here.
+      // Note: getGenerativeModel is lightweight.
+      const lessonModel = this.genAI.getGenerativeModel({
         model: GEMINI_MODEL_TEXT,
-        contents: prompt,
-        config: {
-          systemInstruction: SYSTEM_INSTRUCTION,
-          temperature: type === 'full' ? 0.4 : 0.3 // Higher temp for full content creativity
+        systemInstruction: SYSTEM_INSTRUCTION,
+        generationConfig: {
+          temperature: type === 'full' ? 0.4 : 0.3
         }
       });
-      return response.text || "Không có dữ liệu trả về.";
+
+      const result = await lessonModel.generateContent(prompt);
+      const response = await result.response;
+      return response.text();
     } catch (error) {
       console.error("Lesson Plan Error:", error);
       throw error;
@@ -145,12 +151,14 @@ export class GeminiService {
     `;
 
     try {
-      const response = await this.ai.models.generateContent({
+      const transModel = this.genAI.getGenerativeModel({
         model: GEMINI_MODEL_TEXT,
-        contents: prompt,
-        config: { temperature: 0.1 }
+        generationConfig: { temperature: 0.1 }
       });
-      return response.text || "Lỗi dịch thuật.";
+
+      const result = await transModel.generateContent(prompt);
+      const response = await result.response;
+      return response.text();
     } catch (error) {
       console.error("Translation Error:", error);
       throw error;
@@ -179,15 +187,15 @@ export class GeminiService {
     `;
 
     try {
-      const response = await this.ai.models.generateContent({
+      const labModel = this.genAI.getGenerativeModel({
         model: GEMINI_MODEL_TEXT,
-        contents: prompt,
-        config: {
-          systemInstruction: SYSTEM_INSTRUCTION,
-          temperature: 0.3
-        }
+        systemInstruction: SYSTEM_INSTRUCTION,
+        generationConfig: { temperature: 0.3 }
       });
-      return response.text || "Không thể tạo hướng dẫn Lab.";
+
+      const result = await labModel.generateContent(prompt);
+      const response = await result.response;
+      return response.text();
     } catch (error) {
       console.error("Lab Guide Error:", error);
       throw error;
@@ -211,15 +219,15 @@ export class GeminiService {
     `;
 
     try {
-      const response = await this.ai.models.generateContent({
+      const lectureModel = this.genAI.getGenerativeModel({
         model: GEMINI_MODEL_TEXT,
-        contents: prompt,
-        config: {
-          systemInstruction: SYSTEM_INSTRUCTION,
-          temperature: 0.3
-        }
+        systemInstruction: SYSTEM_INSTRUCTION,
+        generationConfig: { temperature: 0.3 }
       });
-      return response.text || "Không thể tạo nội dung bài giảng.";
+
+      const result = await lectureModel.generateContent(prompt);
+      const response = await result.response;
+      return response.text();
     } catch (error) {
       console.error("Lecture Gen Error:", error);
       throw error;
