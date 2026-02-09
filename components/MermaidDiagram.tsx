@@ -7,6 +7,7 @@ mermaid.initialize({
   theme: 'default',
   securityLevel: 'loose',
   fontFamily: '"Be Vietnam Pro", sans-serif',
+  suppressErrorRendering: true,
 });
 
 interface MermaidDiagramProps {
@@ -22,8 +23,11 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ chart }) => {
       const renderDiagram = async () => {
         try {
           // Clear previous content
-          ref.current!.innerHTML = '';
-          
+          if (ref.current) ref.current.innerHTML = '';
+
+          // Validate syntax first
+          await mermaid.parse(chart);
+
           // Mermaid requires valid syntax. If it fails, it throws.
           const { svg } = await mermaid.render(containerId.current, chart);
           if (ref.current) {
@@ -32,10 +36,21 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ chart }) => {
         } catch (error) {
           console.error('Mermaid render error:', error);
           if (ref.current) {
+            // Escape HTML to prevent XSS
+            const safeChart = chart.replace(/[&<>"']/g, function (m) {
+              switch (m) {
+                case '&': return '&amp;';
+                case '<': return '&lt;';
+                case '>': return '&gt;';
+                case '"': return '&quot;';
+                default: return '&#039;';
+              }
+            });
+
             ref.current.innerHTML = `
               <div class="bg-red-50 text-red-600 p-2 text-xs rounded border border-red-200">
                 Lỗi hiển thị sơ đồ (Cú pháp không hợp lệ)
-                <pre class="mt-1 overflow-x-auto text-[10px] text-gray-500">${chart}</pre>
+                <pre class="mt-1 overflow-x-auto text-[10px] text-gray-500">${safeChart}</pre>
               </div>
             `;
           }
