@@ -27,4 +27,4 @@ LƯU Ý ĐẶC BIỆT:
 *   Luôn trả lời bằng Tiếng Việt (trừ các thuật ngữ chuyên ngành tiếng Anh cần giữ nguyên).
 `;
 
-export const GEMINI_MODEL_TEXT = 'gemini-3-flash-preview'; // Per developer instructions
+export const GEMINI_MODEL_TEXT = 'gemini-2.0-flash'; // Optimized for speed and cost
